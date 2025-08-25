@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Asistencia con QR Turno Mañana</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Estilos existentes... */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo i {
+            font-size: 24px;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab.active {
+            border-bottom: 3px solid #3498db;
+            color: #3498db;
+            background: white;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: background 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        .scanner-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto 20px;
+        }
+        
+        #video {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .scan-region {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%;
+            height: 200px;
+            border: 3px solid #3498db;
+            border-radius: 10px;
+            background: rgba(52, 152, 219, 0.2);
+        }
+        
+        .scanner-result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .qr-code {
+            display: inline-block;
+            margin: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px 15px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #3498db;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        tr:hover {
+            background-color: #e8f4fc;
+        }
+        
+        .status-early {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .status-late {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .status-exit {
+            color: #3498db;
+            font-weight: bold;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .btn-secondary {
+            background: #95a5a6;
+        }
+        
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        
+        .btn-success {
+            background: #27ae60;
+        }
+        
+        .btn-success:hover {
+            background: #219653;
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .attendance-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .summary-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+        
+        .summary-card h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .summary-card .number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        .reset-section {
+            background: #fff3f3;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #e74c3c;
+        }
+        
+        .confirmation-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                flex-wrap: wrap;
+            }
+            
+            .tab {
+                flex: 1;
+                min-width: 120px;
+                text-align: center;
+            }
+            
+            header {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+            
+            h2 {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-qrcode"></i>
+                <h1>Sistema de Asistencia con QR Turno Mañana</h1>
+            </div>
+            <div class="date-display" id="currentDate"></div>
+        </header>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('dashboard')"><i class="fas fa-home"></i> Dashboard</div>
+            <div class="tab" onclick="switchTab('register')"><i class="fas fa-user-plus"></i> Registrar Alumno</div>
+            <div class="tab" onclick="switchTab('scanner')"><i class="fas fa-camera"></i> Escanear QR</div>
+            <div class="tab" onclick="switchTab('records')"><i class="fas fa-history"></i> Registros</div>
+            <div class="tab" onclick="switchTab('students')"><i class="fas fa-users"></i> Alumnos</div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="tab-content active">
+            <h2>Resumen de Asistencia</h2>
+            
+            <div class="attendance-summary">
+                <div class="summary-card">
+                    <h3>Total Alumnos</h3>
+                    <div class="number" id="totalStudents">0</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Asistencias Hoy</h3>
+                    <div class="number" id="todayAttendance">0</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Puntuales</h3>
+                    <div class="number" id="onTime">0</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Tardíos</h3>
+                    <div class="number" id="late">0</div>
+                </div>
+                <div class="summary-card">
+                    <h3>Salidas</h3>
+                    <div class="number" id="exits">0</div>
+                </div>
+            </div>
+            
+            <div class="reset-section">
+                <h3>Gestión de Asistencias Diarias</h3>
+                <p>Esta acción eliminará todos los registros de asistencia del día actual, pero mantendrá a los alumnos registrados.</p>
+                <button onclick="showResetConfirmation()" class="btn-danger">
+                    <i class="fas fa-trash"></i> Reiniciar Asistencias del Día
+                </button>
+            </div>
+            
+            <h2>Últimos Registros</h2>
+            <div class="table-container">
+                <table id="recentTable">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Alumno</th>
+                            <th>Grado</th>
+                            <th>Sección</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Los registros se cargarán aquí dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Pestaña de Registro de Alumno -->
+        <div id="register" class="tab-content">
+            <h2>Registrar Nuevo Alumno</h2>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="studentName">Nombre del Alumno:</label>
+                    <input type="text" id="studentName" placeholder="Ingrese el nombre completo">
+                </div>
+                <div class="form-group">
+                    <label for="studentId">ID del Alumno:</label>
+                    <input type="text" id="studentId" placeholder="Ingrese el ID único">
+                </div>
+                <div class="form-group">
+                    <label for="studentGrade">Grado:</label>
+                    <select id="studentGrade">
+                        <option value="">Seleccione el grado</option>
+                        <option value="1ro">1ro</option>
+                        <option value="2do">2do</option>
+                        <option value="3ro">3ro</option>
+                        <option value="4to">4to</option>
+                        <option value="5to">5to</option>
+                        <option value="6to">6to</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="studentSection">Sección:</label>
+                    <select id="studentSection">
+                        <option value="">Seleccione la sección</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                        <option value="E">E</option>
+                        <option value="F">F</option>
+                        <option value="G">G</option>
+                        <option value="H">H</option>
+                        <option value="I">I</option>
+                        <option value="J">J</option>
+                        <option value="K">K</option>
+                        <option value="L">L</option>
+                        <option value="M">M</option>
+                        <option value="N">N</option>
+                        <option value="O">O</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button onclick="registerStudent()"><i class="fas fa-user-plus"></i> Registrar Alumno y Generar QR</button>
+            
+            <div id="qrResult" style="margin-top: 30px;"></div>
+        </div>
+        
+        <!-- Pestaña de Escáner QR -->
+        <div id="scanner" class="tab-content">
+            <h2>Escanear Código QR de Asistencia</h2>
+            
+            <div class="scanner-container">
+                <video id="video" playsinline></video>
+                <div class="scan-region"></div>
+            </div>
+            
+            <div class="action-buttons">
+                <button onclick="initScanner()"><i class="fas fa-play"></i> Iniciar Escáner</button>
+                <button onclick="stopScanner()" class="btn-secondary"><i class="fas fa-stop"></i> Detener Escáner</button>
+            </div>
+            
+            <div class="scanner-result">
+                <p>Enfoca el código QR dentro del marco para registrar la asistencia</p>
+                <div id="scanResult"></div>
+            </div>
+        </div>
+        
+        <!-- Pestaña de Registros -->
+        <div id="records" class="tab-content">
+            <h2>Registros de Asistencia</h2>
+            
+            <div class="action-buttons">
+                <button onclick="exportToExcel()" class="btn-success"><i class="fas fa-file-export"></i> Exportar a Excel</button>
+                <button onclick="clearAllRecords()" class="btn-danger"><i class="fas fa-trash"></i> Borrar Todos los Registros</button>
+            </div>
+            
+            <div class="table-container">
+                <table id="attendanceTable">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Alumno</th>
+                            <th>Grado</th>
+                            <th>Sección</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Los registros se cargarán aquí dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Pestaña de Lista de Alumnos -->
+        <div id="students" class="tab-content">
+            <h2>Alumnos Registrados</h2>
+            
+            <div class="table-container">
+                <table id="studentsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Grado</th>
+                            <th>Sección</th>
+                            <th>Código QR</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Los alumnos se cargarán aquí dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmación para resetear asistencias -->
+    <div id="resetConfirmation" class="confirmation-modal">
+        <div class="modal-content">
+            <h3><i class="fas fa-exclamation-triangle" style="color: #e74c3c;"></i> Confirmar Reinicio</h3>
+            <p>¿Está seguro de que desea reiniciar todas las asistencias del día de hoy?</p>
+            <p><strong>Esta acción no se puede deshacer.</strong></p>
+            <div class="modal-buttons">
+                <button onclick="resetDailyAttendance()" class="btn-danger">Sí, Reiniciar</button>
+                <button onclick="hideResetConfirmation()" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Almacenamiento en el navegador (simulando una base de datos)
+        let students = JSON.parse(localStorage.getItem('students')) || [];
+        let attendance = JSON.parse(localStorage.getItem('attendance')) || [];
+        
+        // Variables para el escáner
+        let videoStream = null;
+        let scanning = false;
+        
+        // Actualizar fecha actual
+        function updateCurrentDate() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('es-ES', options);
+        }
+        
+        // Cambiar entre pestañas
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`.tab:nth-child(${getTabIndex(tabName)})`).classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+            
+            if (tabName === 'records') {
+                loadAttendanceRecords();
+            } else if (tabName === 'students') {
+                loadStudentsList();
+            } else if (tabName === 'dashboard') {
+                updateDashboard();
+            }
+        }
+        
+        function getTabIndex(tabName) {
+            const tabs = ['dashboard', 'register', 'scanner', 'records', 'students'];
+            return tabs.indexOf(tabName) + 1;
+        }
+        
+        // Actualizar dashboard
+        function updateDashboard() {
+            document.getElementById('totalStudents').textContent = students.length;
+            
+            const today = new Date().toLocaleDateString();
+            const todayRecords = attendance.filter(record => record.date === today);
+            document.getElementById('todayAttendance').textContent = todayRecords.length;
+            
+            const onTime = todayRecords.filter(record => record.status === 'temprano').length;
+            const late = todayRecords.filter(record => record.status === 'tarde').length;
+            const exits = todayRecords.filter(record => record.status === 'salida').length;
+            
+            document.getElementById('onTime').textContent = onTime;
+            document.getElementById('late').textContent = late;
+            document.getElementById('exits').textContent = exits;
+            
+            loadRecentRecords();
+        }
+
+        // Cargar registros recientes
+        function loadRecentRecords() {
+            const tableBody = document.querySelector('#recentTable tbody');
+            tableBody.innerHTML = '';
+            
+            // Ordenar por fecha más reciente primero
+            const sortedAttendance = [...attendance].sort((a, b) => b.timestamp - a.timestamp);
+            
+            // Mostrar solo los últimos 10 registros
+            const recentRecords = sortedAttendance.slice(0, 10);
+            
+            recentRecords.forEach(record => {
+                const row = document.createElement('tr');
+                const statusClass = record.status === 'temprano' ? 'status-early' : 
+                                  record.status === 'tarde' ? 'status-late' : 'status-exit';
+                
+                row.innerHTML = `
+                    <td>${record.date}</td>
+                    <td>${record.time}</td>
+                    <td>${record.studentName}</td>
+                    <td>${record.grade}</td>
+                    <td>${record.section}</td>
+                    <td class="${statusClass}">${record.status}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Registrar un nuevo alumno
+        function registerStudent() {
+            const name = document.getElementById('studentName').value;
+            const id = document.getElementById('studentId').value;
+            const grade = document.getElementById('studentGrade').value;
+            const section = document.getElementById('studentSection').value;
+            
+            if (!name || !id || !grade || !section) {
+                alert('Por favor, complete todos los campos.');
+                return;
+            }
+            
+            // Verificar si el ID ya existe
+            if (students.some(student => student.id === id)) {
+                alert('Este ID de estudiante ya está registrado.');
+                return;
+            }
+            
+            const newStudent = {
+                id,
+                name,
+                grade,
+                section,
+                qrData: `STUDENT-${id}-${Date.now()}`
+            };
+            
+            students.push(newStudent);
+            localStorage.setItem('students', JSON.stringify(students));
+            
+            // Generar y mostrar el código QR
+            generateQRCode(newStudent);
+            
+            alert('Alumno registrado exitosamente!');
+            document.getElementById('studentName').value = '';
+            document.getElementById('studentId').value = '';
+            document.getElementById('studentGrade').value = '';
+            document.getElementById('studentSection').value = '';
+        }
+        
+        // Generar código QR para el alumno
+        function generateQRCode(student) {
+            const qrResult = document.getElementById('qrResult');
+            qrResult.innerHTML = `
+                <h3>QR para ${student.name}</h3>
+                <div class="qr-code">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${student.qrData}" 
+                         alt="Código QR para ${student.name}">
+                    <p>ID: ${student.id} | ${student.grade} ${student.section}</p>
+                </div>
+                <p>Imprima este código QR para que el alumno pueda usarlo para registrar asistencia.</p>
+            `;
+        }
+        
+        // Inicializar el escáner QR
+        function initScanner() {
+            const video = document.getElementById('video');
+            const scanResult = document.getElementById('scanResult');
+            
+            if (scanning) return;
+            
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(function(stream) {
+                    videoStream = stream;
+                    video.srcObject = stream;
+                    video.setAttribute("playsinline", true);
+                    video.play();
+                    
+                    scanning = true;
+                    requestAnimationFrame(tick);
+                    
+                    function tick() {
+                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            const context = canvas.getContext('2d');
+                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            
+                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                            const code = jsQR(imageData.data, imageData.width, imageData.height);
+                            
+                            if (code) {
+                                processScannedCode(code.data);
+                            }
+                        }
+                        
+                        if (scanning) {
+                            requestAnimationFrame(tick);
+                        }
+                    }
+                })
+                .catch(function(err) {
+                    console.error("Error accediendo a la cámara: ", err);
+                    alert("No se pudo acceder a la cámara. Asegúrese de conceder los permisos necesarios.");
+                });
+        }
+        
+        // Detener el escáner
+        function stopScanner() {
+            scanning = false;
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            const video = document.getElementById('video');
+            video.srcObject = null;
+        }
+        
+        // Procesar código QR escaneado
+        function processScannedCode(qrData) {
+            if (!qrData.startsWith('STUDENT-')) {
+                document.getElementById('scanResult').innerHTML = '<p style="color: red;">Código QR inválido</p>';
+                return;
+            }
+            
+            const parts = qrData.split('-');
+            const studentId = parts[1];
+            
+            const student = students.find(s => s.id === studentId);
+            if (!student) {
+                document.getElementById('scanResult').innerHTML = '<p style="color: red;">Estudiante no encontrado</p>';
+                return;
+            }
+            
+            // Registrar asistencia
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const timeString = `${hours}:${minutes < 10 ? '0' : ''}${minutes}`;
+            
+            // Determinar el estado según el horario
+            let status = '';
+            const totalMinutes = hours * 60 + minutes;
+            
+            // De 6:10 a 6:26 -> temprano
+            if (totalMinutes >= 370 && totalMinutes <= 386) {
+                status = 'temprano';
+            } 
+            // De 6:27 a 12:34 -> tarde
+            else if (totalMinutes >= 387 && totalMinutes <= 754) {
+                status = 'tarde';
+            } 
+            // De 12:35 a 12:50 -> salida
+            else if (totalMinutes >= 755 && totalMinutes <= 770) {
+                status = 'salida';
+            } 
+            // Fuera de horario
+            else {
+                document.getElementById('scanResult').innerHTML = `
+                    <p style="color: red;">Fuera de horario de registro</p>
+                    <p>Horario de entrada: 6:10 a 12:34</p>
+                    <p>Horario de salida: 12:35 a 12:50</p>
+                `;
+                return;
+            }
+            
+            const attendanceRecord = {
+                studentId: student.id,
+                studentName: student.name,
+                grade: student.grade,
+                section: student.section,
+                date: now.toLocaleDateString(),
+                time: timeString,
+                status: status,
+                timestamp: now.getTime()
+            };
+            
+            // Verificar si ya se registró asistencia hoy para el mismo tipo (entrada o salida)
+            const today = new Date().toLocaleDateString();
+            const alreadyRegistered = attendance.some(record => 
+                record.studentId === student.id && 
+                record.date === today && 
+                record.status === status
+            );
+            
+            if (alreadyRegistered) {
+                document.getElementById('scanResult').innerHTML = `
+                    <p style="color: orange;">${status.charAt(0).toUpperCase() + status.slice(1)} ya registrada hoy para ${student.name}</p>
+                `;
+                return;
+            }
+            
+            attendance.push(attendanceRecord);
+            localStorage.setItem('attendance', JSON.stringify(attendance));
+            
+            document.getElementById('scanResult').innerHTML = `
+                <p style="color: green;">${status.charAt(0).toUpperCase() + status.slice(1)} registrada para ${student.name}</p>
+                <p>Hora: ${timeString} - Estado: <span class="status-${status === 'temprano' ? 'early' : status === 'tarde' ? 'late' : 'exit'}">${status}</span></p>
+            `;
+            
+            // Actualizar dashboard si está visible
+            if (document.getElementById('dashboard').classList.contains('active')) {
+                updateDashboard();
+            }
+            
+            // Detener el escáner después de un registro exitoso
+            setTimeout(stopScanner, 2000);
+        }
+        
+        // Cargar registros de asistencia
+        function loadAttendanceRecords() {
+            const tableBody = document.querySelector('#attendanceTable tbody');
+            tableBody.innerHTML = '';
+            
+            // Ordenar por fecha más reciente primero
+            const sortedAttendance = [...attendance].sort((a, b) => b.timestamp - a.timestamp);
+            
+            sortedAttendance.forEach(record => {
+                const row = document.createElement('tr');
+                const statusClass = record.status === 'temprano' ? 'status-early' : 
+                                  record.status === 'tarde' ? 'status-late' : 'status-exit';
+                
+                row.innerHTML = `
+                    <td>${record.date}</td>
+                    <td>${record.time}</td>
+                    <td>${record.studentName}</td>
+                    <td>${record.grade}</td>
+                    <td>${record.section}</td>
+                    <td class="${statusClass}">${record.status}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Cargar lista de alumnos
+        function loadStudentsList() {
+            const tableBody = document.querySelector('#studentsTable tbody');
+            tableBody.innerHTML = '';
+            
+            students.forEach(student => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${student.id}</td>
+                    <td>${student.name}</td>
+                    <td>${student.grade}</td>
+                    <td>${student.section}</td>
+                    <td>
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${student.qrData}" 
+                             alt="QR" style="width: 80px; height: 80px;">
+                    </td>
+                    <td>
+                        <button onclick="deleteStudent('${student.id}')" class="btn-secondary"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Eliminar alumno
+        function deleteStudent(studentId) {
+            if (confirm('¿Está seguro de que desea eliminar este alumno?')) {
+                students = students.filter(student => student.id !== studentId);
+                // También eliminamos sus registros de asistencia
+                attendance = attendance.filter(record => record.studentId !== studentId);
+                localStorage.setItem('students', JSON.stringify(students));
+                localStorage.setItem('attendance', JSON.stringify(attendance));
+                loadStudentsList();
+                
+                // Si estamos en la pestaña de registros, actualizamos
+                if (document.getElementById('records').classList.contains('active')) {
+                    loadAttendanceRecords();
+                }
+                
+                // Actualizar dashboard
+                updateDashboard();
+            }
+        }
+        
+        // Exportar a Excel
+        function exportToExcel() {
+            // Preparar los datos para la exportación
+            const dataForExport = attendance.map(record => ({
+                'Fecha': record.date,
+                'Hora': record.time,
+                'Alumno': record.studentName,
+                'Grado': record.grade,
+                'Sección': record.section,
+                'Estado': record.status
+            }));
+            
+            // Crear libro de Excel y hoja de trabajo
+            const worksheet = XLSX.utils.json_to_sheet(dataForExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Asistencias');
+            
+            // Generar archivo Excel y descargarlo
+            const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+            saveAsExcel(excelBuffer, 'asistencia.xlsx');
+        }
+        
+        // Guardar archivo Excel
+        function saveAsExcel(buffer, filename) {
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // Mostrar modal de confirmación para resetear asistencias
+        function showResetConfirmation() {
+            document.getElementById('resetConfirmation').style.display = 'flex';
+        }
+        
+        // Ocultar modal de confirmación
+        function hideResetConfirmation() {
+            document.getElementById('resetConfirmation').style.display = 'none';
+        }
+        
+        // Reiniciar asistencias del día actual
+        function resetDailyAttendance() {
+            const today = new Date().toLocaleDateString();
+            
+            // Filtrar solo los registros que NO son de hoy
+            attendance = attendance.filter(record => record.date !== today);
+            
+            // Guardar en localStorage
+            localStorage.setItem('attendance', JSON.stringify(attendance));
+            
+            // Actualizar la interfaz
+            updateDashboard();
+            if (document.getElementById('records').classList.contains('active')) {
+                loadAttendanceRecords();
+            }
+            
+            // Ocultar el modal
+            hideResetConfirmation();
+            
+            // Mostrar mensaje de éxito
+            alert('Asistencias del día reiniciadas correctamente.');
+        }
+        
+        // Borrar todos los registros de asistencia
+        function clearAllRecords() {
+            if (confirm('¿Está seguro de que desea eliminar TODOS los registros de asistencia? Esta acción no se puede deshacer.')) {
+                attendance = [];
+                localStorage.setItem('attendance', JSON.stringify(attendance));
+                
+                // Actualizar la interfaz
+                updateDashboard();
+                loadAttendanceRecords();
+                
+                alert('Todos los registros de asistencia han sido eliminados.');
+            }
+        }
+        
+        // Inicializar la aplicación
+        window.onload = function() {
+            updateCurrentDate();
+            updateDashboard();
+            loadAttendanceRecords();
+            loadStudentsList();
+            
+            // Actualizar la fecha cada minuto
+            setInterval(updateCurrentDate, 60000);
+        };
+    </script>
+</body>
+</html>
